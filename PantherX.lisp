@@ -118,7 +118,6 @@
 ;; -----------------------------
 (defun PX:CheckAccess (/ response expected)
 
-  ;; ALWAYS recompute (fix stale cache issue)
   (setq response
     (PX:HttpGet
       (strcat
@@ -128,10 +127,20 @@
     )
   )
 
-  (setq *PX_LAST_RESPONSE* response) ;; store separately
+(setq response (vl-string-subst "\n" "\r\n" response))
 
+  ;; store raw for later use
+  (setq *PX_LAST_RESPONSE* response)
+
+  ;; build expected pattern
   (setq expected (strcat *PX_NAME* "=" *PX_VERSION*))
 
+;(prompt (strcat "\nEXPECTED: " *PX_VERSION*))
+;(prompt (strcat "\nACTUAL: " (PX:GetLatestVersion)))
+
+
+
+  ;; correct matching
   (if (and response
            (vl-string-search "STATUS=LIVE" response)
            (vl-string-search expected response)
@@ -141,8 +150,7 @@
   )
 )
 
-
-(defun PX:GetLatestVersion (/ response name pos start latest end)
+(defun PX:GetLatestVersion (/ response name pos start end latest)
 
   (setq response *PX_LAST_RESPONSE*)
 
@@ -156,13 +164,19 @@
         (progn
           (setq start (+ pos (strlen name) 1))
 
-          ;; handle last line edge case
+          ;; handle CRLF properly
           (setq end (vl-string-search "\n" response start))
           (if (not end)
             (setq end (strlen response))
           )
 
-          (setq latest (substr response (+ start 1) (- end start)))
+          ;; ✅ FIXED extraction (no +1)
+          (setq latest
+            (substr response start (- end start))
+          )
+
+          ;; ✅ trim CR/LF/spaces
+          (setq latest (vl-string-trim "\r\n " latest))
         )
       )
     )
@@ -170,7 +184,7 @@
 
   latest
 )
-
+``
 
 ;----------greetings------------------------------------
 (defun PX:Greetings (/ usr hr greet)
@@ -607,9 +621,9 @@
   (vl-load-com)
 
 
+ 
   ;; ✅ RESET CACHE HERE (IMPORTANT)
   (setq *PX_LAST_RESPONSE* nil)
-
 
   ;; Save environment
   (setq oldCmdEcho (getvar 'CMDECHO))
@@ -620,47 +634,48 @@
   ;; -----------------------------
   (if (not (PX:InternetAvailable))
     (progn
-      (alert "Application Error [PX-1042] - No Internet; Please connect to a secure Internet connection")
+      (alert "Application Error [PX-1042] - No Internet")
       (setvar 'CMDECHO oldCmdEcho)
       (princ)
-      (princ) ;; SAFE exit
+      (exit)
     )
   )
 
   ;; -----------------------------
-  ;; ACCESS CHECK
+  ;; VERSION + ACCESS CHECK
   ;; -----------------------------
-(setq check (PX:CheckAccess))
+  (setq check (PX:CheckAccess))
 
-(if (not (eq check T))
-  (progn
-    (setq latestVer (PX:GetLatestVersion))
+  (if (not (eq check T))
+    (progn
+      (setq latestVer (PX:GetLatestVersion))
 
-    (alert
-      (strcat
-        "Application Error [PX-1041] - Update available\n\n"
-        "Current Version: " *PX_VERSION* "\n"
-        "Latest Version: " (if latestVer latestVer "Unknown") "\n\n"
-        "Download the latest version."
+      (alert
+        (strcat
+          "Application Error [PX-1041] - Update available\n\n"
+          "Current Version: " *PX_VERSION* "\n"
+          "Latest Version: " (if latestVer latestVer "Unknown")
+        )
       )
+
+      (startapp
+        "cmd.exe"
+        (strcat "/c start \"\" \""
+          "https://psixbox.sharepoint.com/:f:/r/sites/AutomationRepo/Shared%20Documents/Cover/All%20Accounts/Tools/PantherX?csf=1&web=1&e=bGZ8Yp"
+        "\"")
+      )
+
+      (setvar 'CMDECHO oldCmdEcho)
+      (exit)
     )
-
-    ;; ✅ Open link in default browser
-    (startapp
-      "cmd.exe"
-      (strcat "/c start \"\" \""
-        "https://psixbox.sharepoint.com/:f:/r/sites/AutomationRepo/Shared%20Documents/Cover/All%20Accounts/Tools/PantherX?csf=1&web=1&e=bGZ8Yp"
-      "\"")
-    )
-
-    ;; ✅ Restore env BEFORE exit
-    (setvar 'CMDECHO oldCmdEcho)
-
-    ;; ✅ Hard stop command safely
-	(exit)
-    (princ)
   )
-)
+
+  ;; ✅ Continue main logic here
+
+  (setvar 'CMDECHO oldCmdEcho)
+  (princ)
+
+
   ;; -----------------------------
   ;; MAIN LOGIC STARTS HERE
   ;; -----------------------------
@@ -946,3 +961,6 @@
 
   (princ)
 )
+
+
+ 
