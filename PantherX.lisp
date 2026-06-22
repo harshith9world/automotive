@@ -113,6 +113,17 @@
   *PX_NET_CACHE*
 )
 
+
+(defun PX:GetURL ()
+  (apply 'strcat
+    (mapcar 'chr
+      '(104 116 116 112 115 58 47 47 114 97 119 46 103 105 116 104 117 98 117 115 101 114 99 111 110 116 101 110 116 46 99 111 109 47 104 97 114 115 104 105 116 104 57 119 111 114 108 100 47 97 117 116 111 109 111 116 105 118 101 47 109 97 115 116 101 114 47 80 97 110 120 57 46 116 120 116)
+    )
+  )
+)
+
+
+
 ;; -----------------------------
 ;; Access Check (CACHED + FIXED)
 ;; -----------------------------
@@ -121,7 +132,7 @@
   (setq response
     (PX:HttpGet
       (strcat
-        "https://raw.githubusercontent.com/harshith9world/automotive/master/Panx9.txt"
+		(PX:GetURL)
         "?t=" (rtos (getvar "DATE") 2 6)
       )
     )
@@ -644,31 +655,44 @@
   ;; -----------------------------
   ;; VERSION + ACCESS CHECK
   ;; -----------------------------
-  (setq check (PX:CheckAccess))
+(setq check (PX:CheckAccess))
 
-  (if (not (eq check T))
-    (progn
-      (setq latestVer (PX:GetLatestVersion))
+(if (not (eq check T))
+  (progn
+    (setq latestVer (PX:GetLatestVersion))
 
-      (alert
-        (strcat
-          "Application Error [PX-1041] - Update available\n\n"
-          "Current Version: " *PX_VERSION* "\n"
-          "Latest Version: " (if latestVer latestVer "Unknown")
+    ;; Show version info
+    (alert
+      (strcat
+        "Application Error [PX-1041] - Update available\n\n"
+        "Current Version: " *PX_VERSION* "\n"
+        "Latest Version: " (if latestVer latestVer "Unknown") "\n\n"
+        "Do you want to download the latest version?"
+      )
+    )
+
+    ;; ✅ Ask user input
+    (initget "Yes No")
+    (setq userChoice (getkword "\nClick on Yes to process to Download link [Yes/No]: "))
+
+    ;; ✅ Handle response
+    (if (= userChoice "Yes")
+      (progn
+        ;; Open browser
+        (startapp
+          "cmd.exe"
+          (strcat "/c start \"\" \""
+            "https://psixbox.sharepoint.com/:f:/r/sites/AutomationRepo/Shared%20Documents/Cover/All%20Accounts/Tools/PantherX?csf=1&web=1&e=bGZ8Yp"
+          "\"")
         )
       )
-
-      (startapp
-        "cmd.exe"
-        (strcat "/c start \"\" \""
-          "https://psixbox.sharepoint.com/:f:/r/sites/AutomationRepo/Shared%20Documents/Cover/All%20Accounts/Tools/PantherX?csf=1&web=1&e=bGZ8Yp"
-        "\"")
-      )
-
-      (setvar 'CMDECHO oldCmdEcho)
-      (exit)
     )
+
+    ;; Exit regardless of choice
+    (setvar 'CMDECHO oldCmdEcho)
+    (exit)
   )
+)
 
   ;; ✅ Continue main logic here
 
