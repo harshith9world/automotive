@@ -126,39 +126,32 @@
 ;; -----------------------------
 ;; Access Check (CACHED + FIXED)
 ;; -----------------------------
-(defun PX:CheckAccess (/ response expected)
+
+(defun PX:CheckAccess (/ response)
+
   (setq response
     (PX:HttpGet
       (strcat
-		(PX:GetURL)
+        (PX:GetURL)
         "?t=" (rtos (getvar "DATE") 2 6)
       )
     )
   )
 
-(setq response (vl-string-subst "\n" "\r\n" response))
+  (setq response (vl-string-subst "\n" "\r\n" response))
 
-  ;; store raw for later use
   (setq *PX_LAST_RESPONSE* response)
 
-  ;; build expected pattern
-  (setq expected (strcat *PX_NAME* "=" *PX_VERSION*))
-
-;(prompt (strcat "\nEXPECTED: " *PX_VERSION*))
-;(prompt (strcat "\nACTUAL: " (PX:GetLatestVersion)))
-
-
-
-  ;; correct matching
+  ;; ✅ ONLY STATUS CHECK
   (if (and response
            (vl-string-search "STATUS=LIVE" response)
-           (vl-string-search expected response)
       )
     T
     nil
   )
 )
 
+;---------------------------------------------------------------
 (defun PX:GetLatestVersion (/ response name pos start end latest)
 
   (setq response *PX_LAST_RESPONSE*)
@@ -294,7 +287,7 @@
 	  "spacer;" 	  
 	  
 	  ": boxed_column {"
-	  "  label = \"Settings\";"
+	  "  label = \"Settings - coming soon\";"
 	  "  : text { label = \"Multi-Viewport ?\"; }"
 	  "	 : row {"
 	  "		: radio_button { key = \"yes\"; label = \"Yes\"; }"
@@ -657,26 +650,23 @@
 
 (if (not (eq check T))
   (progn
-    (setq latestVer (PX:GetLatestVersion))
 
-    ;; Show version info
+    ;; ✅ KEEP MESSAGE (no version details now)
     (alert
       (strcat
         "Application Error [PX-1041] - Update available\n\n"
-        "Current Version: " *PX_VERSION* "\n"
-        "Latest Version: " (if latestVer latestVer "Unknown") "\n\n"
-        "Do you want to download the latest version?"
+        "Please download the latest working version.\n\n"
+        "Do you want to download now?"
       )
     )
 
     ;; ✅ Ask user input
     (initget "Yes No")
-    (setq userChoice (getkword "\nClick on Yes to process to Download link [Yes/No]: "))
+    (setq userChoice (getkword "\nClick on Yes to proceed to download link [Yes/No]: "))
 
     ;; ✅ Handle response
     (if (= userChoice "Yes")
       (progn
-        ;; Open browser
         (startapp
           "cmd.exe"
           (strcat "/c start \"\" \""
@@ -686,7 +676,7 @@
       )
     )
 
-    ;; Exit regardless of choice
+    ;; Exit
     (setvar 'CMDECHO oldCmdEcho)
     (exit)
   )
